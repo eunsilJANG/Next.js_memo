@@ -1,28 +1,20 @@
 import '#/styles/globals.css';
 
-import db from '#/lib/db';
-import Byline from '#/ui/byline';
-import { GlobalNav } from '#/ui/global-nav';
 import { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: { default: 'Next.js Playground', template: '%s | Next.js Playground' },
-  metadataBase: new URL('https://app-router.vercel.app'),
+  title: { default: '메모 앱', template: '%s | 메모 앱' },
+  metadataBase: new URL('https://memo-app.vercel.app'),
   description:
-    'A playground to explore Next.js features such as nested layouts, instant loading states, streaming, and component level data fetching.',
+    '생각과 아이디어를 정리하는 스마트 메모 앱. 카테고리별 분류, 태그 시스템, 검색 기능을 제공합니다.',
   openGraph: {
-    title: 'Next.js Playground',
+    title: '메모 앱',
     description:
-      'A playground to explore Next.js features such as nested layouts, instant loading states, streaming, and component level data fetching.',
-    images: [`/api/og?title=Next.js Playground`],
+      '생각과 아이디어를 정리하는 스마트 메모 앱. 카테고리별 분류, 태그 시스템, 검색 기능을 제공합니다.',
+    images: [`/api/og?title=메모 앱`],
   },
   twitter: { card: 'summary_large_image' },
 };
@@ -32,22 +24,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const demos = db.demo.findMany();
   return (
-    <html lang="en" className="[color-scheme:dark]">
-      <body
-        className={`overflow-y-scroll bg-gray-950 font-sans ${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="fixed top-0 z-10 flex w-full flex-col border-b border-gray-800 bg-black lg:bottom-0 lg:z-auto lg:w-72 lg:border-r lg:border-b-0 lg:border-gray-800">
-          <GlobalNav items={demos} />
-        </div>
-
-        <div className="lg:pl-72">
-          <div className="mx-auto mt-12 mb-24 max-w-4xl -space-y-[1px] lg:px-8 lg:py-8">
-            {children}
-
-            <Byline />
-          </div>
+    <html lang="ko" className="[color-scheme:dark]">
+      <body className={`overflow-y-scroll bg-gray-950 font-sans antialiased ${inter.className}`}>
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          {children}
         </div>
       </body>
     </html>

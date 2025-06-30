@@ -6,105 +6,100 @@ import 'server-only';
 import {
   data,
   type Category,
-  type Demo,
-  type DemoCategory,
-  type DemoSlug,
-  type Product,
-  type Section,
+  type Memo,
+  type Tag,
 } from '../app/_internal/_data';
 
-type ProductWhere = { id?: string; category?: string; section?: string };
+type MemoWhere = { 
+  id?: string; 
+  category?: string; 
+  tags?: string[];
+  isPinned?: boolean;
+  isArchived?: boolean;
+  search?: string;
+};
 
-type ProductFindOptions = { where?: ProductWhere; limit?: number };
+type MemoFindOptions = { 
+  where?: MemoWhere; 
+  limit?: number;
+  orderBy?: { field: 'createdAt' | 'updatedAt' | 'title'; direction: 'asc' | 'desc' };
+};
 
-type SectionWhere = { id?: string; slug?: string };
+type CategoryWhere = { id?: string; slug?: string };
 
-type SectionFindOptions = { where?: SectionWhere; limit?: number };
+type CategoryFindOptions = { where?: CategoryWhere; limit?: number };
 
-type CategoryWhere = { id?: string; slug?: string; section?: string };
+type TagWhere = { id?: string; name?: string };
 
-type CategoryFindOptions = { where?: CategoryWhere };
-
-type DemoWhere = { slug?: DemoSlug };
-
-type DemoFindOptions = { where?: DemoWhere };
+type TagFindOptions = { where?: TagWhere; limit?: number };
 
 const db = {
-  product: {
-    find: (options: ProductFindOptions) => {
-      let product: Product | undefined;
+  memo: {
+    find: (options: MemoFindOptions) => {
+      let memo: Memo | undefined;
 
       if (options.where?.id !== undefined) {
-        product = data.products.find((p) => p.id === options.where?.id);
-      } else if (options.where?.category !== undefined) {
-        product = data.products.find(
-          (p) => p.category === options.where?.category,
-        );
+        memo = data.memos.find((m) => m.id === options.where?.id);
       }
 
       let prev: string | undefined = undefined;
       let next: string | undefined = undefined;
 
-      if (product) {
-        const ids = data.products.map((p) => Number(p.id));
-        const currentIndex = ids.indexOf(Number(product.id));
+      if (memo) {
+        const ids = data.memos.map((m) => Number(m.id));
+        const currentIndex = ids.indexOf(Number(memo.id));
         const prevIndex = (currentIndex - 1 + ids.length) % ids.length;
         const nextIndex = (currentIndex + 1) % ids.length;
 
-        prev = data.products[prevIndex]?.id;
-        next = data.products[nextIndex]?.id;
+        prev = data.memos[prevIndex]?.id;
+        next = data.memos[nextIndex]?.id;
       }
 
-      return product ? { ...product, prev, next } : null;
+      return memo ? { ...memo, prev, next } : null;
     },
-    findMany: (options: ProductFindOptions = {}) => {
-      let result = data.products;
+    findMany: (options: MemoFindOptions = {}) => {
+      let result = data.memos;
 
       if (options.where?.category) {
         result = result.filter(
-          (product) => product.category === options.where!.category,
+          (memo) => memo.category === options.where!.category,
         );
       }
 
-      if (options.where?.section) {
-        const sectionCategories = data.categories
-          .filter((category) => category.section === options.where!.section)
-          .map((category) => category.id);
-        result = result.filter((product) =>
-          sectionCategories.includes(product.category),
+      if (options.where?.tags && options.where.tags.length > 0) {
+        result = result.filter((memo) =>
+          options.where!.tags!.some((tag) => memo.tags.includes(tag)),
         );
       }
 
-      if (options.limit !== undefined) {
-        result = result.slice(0, options.limit);
+      if (options.where?.isPinned !== undefined) {
+        result = result.filter((memo) => memo.isPinned === options.where!.isPinned);
       }
 
-      return result;
-    },
-  },
-  section: {
-    find: (options: SectionFindOptions) => {
-      let section: Section | undefined;
-
-      if (options.where?.id !== undefined) {
-        section = data.sections.find((s) => s.id === options.where?.id);
-      } else if (options.where?.slug !== undefined) {
-        section = data.sections.find((s) => s.slug === options.where?.slug);
+      if (options.where?.isArchived !== undefined) {
+        result = result.filter((memo) => memo.isArchived === options.where!.isArchived);
       }
 
-      return section || null;
-    },
-    findMany: (options: SectionFindOptions = {}) => {
-      let result = data.sections;
-
-      if (options.where?.id) {
-        result = result.filter((section) => section.id === options.where!.id);
-      }
-
-      if (options.where?.slug) {
+      if (options.where?.search) {
+        const searchTerm = options.where.search.toLowerCase();
         result = result.filter(
-          (section) => section.slug === options.where!.slug,
+          (memo) =>
+            memo.title.toLowerCase().includes(searchTerm) ||
+            memo.content.toLowerCase().includes(searchTerm),
         );
+      }
+
+      if (options.orderBy) {
+        result = result.sort((a, b) => {
+          const aValue = a[options.orderBy!.field];
+          const bValue = b[options.orderBy!.field];
+          
+          if (options.orderBy!.direction === 'asc') {
+            return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          } else {
+            return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+          }
+        });
       }
 
       if (options.limit !== undefined) {
@@ -112,6 +107,34 @@ const db = {
       }
 
       return result;
+    },
+    create: (memoData: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const newMemo: Memo = {
+        ...memoData,
+        id: (data.memos.length + 1).toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      data.memos.push(newMemo);
+      return newMemo;
+    },
+    update: (id: string, memoData: Partial<Omit<Memo, 'id' | 'createdAt'>>) => {
+      const index = data.memos.findIndex((m) => m.id === id);
+      if (index === -1) return null;
+      
+      data.memos[index] = {
+        ...data.memos[index],
+        ...memoData,
+        updatedAt: new Date().toISOString(),
+      };
+      return data.memos[index];
+    },
+    delete: (id: string) => {
+      const index = data.memos.findIndex((m) => m.id === id);
+      if (index === -1) return false;
+      
+      data.memos.splice(index, 1);
+      return true;
     },
   },
   category: {
@@ -122,10 +145,6 @@ const db = {
         category = data.categories.find((c) => c.id === options.where?.id);
       } else if (options.where?.slug !== undefined) {
         category = data.categories.find((c) => c.slug === options.where?.slug);
-      } else if (options.where?.section !== undefined) {
-        category = data.categories.find(
-          (c) => c.section === options.where?.section,
-        );
       }
 
       return category || null;
@@ -143,45 +162,95 @@ const db = {
         );
       }
 
-      if (options.where?.section) {
-        result = result.filter(
-          (category) => category.section === options.where!.section,
-        );
+      if (options.limit !== undefined) {
+        result = result.slice(0, options.limit);
       }
 
       return result;
     },
-  },
-  demo: {
-    find: (options: DemoFindOptions) => {
-      let demo: Demo | undefined;
-
-      if (options.where?.slug !== undefined) {
-        for (const category of data.demos) {
-          const found = category.items.find(
-            (d) => d.slug === options.where?.slug,
-          );
-          if (found) {
-            demo = found;
-            break;
-          }
-        }
-      }
-
-      // More strict than other entities because demos are used to
-      // build the site not just display data.
-      if (typeof demo === 'undefined') {
-        throw new Error(`Demo not found: ${options.where?.slug}`);
-      }
-
-      return demo;
+    create: (categoryData: Omit<Category, 'id'>) => {
+      const newCategory: Category = {
+        ...categoryData,
+        id: (data.categories.length + 1).toString(),
+      };
+      data.categories.push(newCategory);
+      return newCategory;
     },
-    findMany: () => {
-      return data.demos;
+    update: (id: string, categoryData: Partial<Omit<Category, 'id'>>) => {
+      const index = data.categories.findIndex((c) => c.id === id);
+      if (index === -1) return null;
+      
+      data.categories[index] = {
+        ...data.categories[index],
+        ...categoryData,
+      };
+      return data.categories[index];
+    },
+    delete: (id: string) => {
+      const index = data.categories.findIndex((c) => c.id === id);
+      if (index === -1) return false;
+      
+      data.categories.splice(index, 1);
+      return true;
+    },
+  },
+  tag: {
+    find: (options: TagFindOptions) => {
+      let tag: Tag | undefined;
+
+      if (options.where?.id !== undefined) {
+        tag = data.tags.find((t) => t.id === options.where?.id);
+      } else if (options.where?.name !== undefined) {
+        tag = data.tags.find((t) => t.name === options.where?.name);
+      }
+
+      return tag || null;
+    },
+    findMany: (options: TagFindOptions = {}) => {
+      let result = data.tags;
+
+      if (options.where?.id) {
+        result = result.filter((tag) => tag.id === options.where!.id);
+      }
+
+      if (options.where?.name) {
+        result = result.filter((tag) => tag.name === options.where!.name);
+      }
+
+      if (options.limit !== undefined) {
+        result = result.slice(0, options.limit);
+      }
+
+      return result;
+    },
+    create: (tagData: Omit<Tag, 'id'>) => {
+      const newTag: Tag = {
+        ...tagData,
+        id: (data.tags.length + 1).toString(),
+      };
+      data.tags.push(newTag);
+      return newTag;
+    },
+    update: (id: string, tagData: Partial<Omit<Tag, 'id'>>) => {
+      const index = data.tags.findIndex((t) => t.id === id);
+      if (index === -1) return null;
+      
+      data.tags[index] = {
+        ...data.tags[index],
+        ...tagData,
+      };
+      return data.tags[index];
+    },
+    delete: (id: string) => {
+      const index = data.tags.findIndex((t) => t.id === id);
+      if (index === -1) return false;
+      
+      data.tags.splice(index, 1);
+      return true;
     },
   },
 };
 
 export default db;
 
-export type { Demo, Product, Section, Category, DemoCategory };
+export type { Memo, Category, Tag };
