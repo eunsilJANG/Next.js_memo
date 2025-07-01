@@ -6,9 +6,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('API: Looking for memo with ID:', params.id);
+    
     const memo = db.memo.find({ where: { id: params.id } });
     
+    console.log('API: Found memo:', memo);
+    
     if (!memo) {
+      console.log('API: Memo not found');
       return NextResponse.json(
         { error: '메모를 찾을 수 없습니다.' },
         { status: 404 }
@@ -17,6 +22,7 @@ export async function GET(
 
     return NextResponse.json(memo);
   } catch (error) {
+    console.error('API: Error finding memo:', error);
     return NextResponse.json(
       { error: '메모 조회에 실패했습니다.' },
       { status: 500 }

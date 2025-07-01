@@ -75,6 +75,10 @@ function MemoEditorContent() {
         const savedMemo = await response.json();
         console.log('Saved memo:', savedMemo); // 디버깅용 로그
         router.push(`/memos/${savedMemo.id}`);
+        // 강제로 새로고침하여 데이터 동기화
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || '메모 저장에 실패했습니다.');

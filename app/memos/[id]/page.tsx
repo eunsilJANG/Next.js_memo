@@ -1,27 +1,102 @@
-import db from '#/lib/db';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Boundary } from '#/ui/boundary';
 import Button from '#/ui/button';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { TimeAgo } from '#/app/_components/time-ago';
 
-export default async function MemoPage(props: any) {
-  const awaitedProps = await props;
-  const params = await awaitedProps.params;
-  
-  console.log('Looking for memo with ID:', params.id); // 디버깅용 로그
-  
-  const memo = db.memo.find({ where: { id: params.id } });
-  
-  console.log('Found memo:', memo); // 디버깅용 로그
-  
-  if (!memo) {
-    console.log('Memo not found, calling notFound()'); // 디버깅용 로그
-    notFound();
+export default function MemoPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [memo, setMemo] = useState<any>(null);
+  const [category, setCategory] = useState<any>(null);
+  const [tags, setTags] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMemo = async () => {
+      try {
+        setIsLoading(true);
+        console.log('Looking for memo with ID:', params.id);
+        
+        const response = await fetch(`/api/memos/${params.id}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('메모를 찾을 수 없습니다.');
+          } else {
+            setError('메모를 불러오는데 실패했습니다.');
+          }
+          return;
+        }
+        
+        const memoData = await response.json();
+        console.log('Found memo:', memoData);
+        setMemo(memoData);
+        
+        // 카테고리와 태그 정보도 가져오기
+        const [categoryRes, tagsRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/tags')
+        ]);
+        
+        const categories = await categoryRes.json();
+        const tagsData = await tagsRes.json();
+        
+        const memoCategory = categories.find((c: any) => c.id === memoData.category);
+        const memoTags = tagsData.filter((t: any) => memoData.tags.includes(t.id));
+        
+        setCategory(memoCategory);
+        setTags(memoTags);
+        
+      } catch (error) {
+        console.error('Error fetching memo:', error);
+        setError('메모를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchMemo();
+    }
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <Boundary
+        label="메모 상세"
+        animateRerendering={false}
+        kind="solid"
+        className="flex flex-col gap-6"
+      >
+        <div className="p-6 text-center text-gray-400">로딩 중...</div>
+      </Boundary>
+    );
   }
 
-  const category = db.category.find({ where: { id: memo.category } });
-  const tags = db.tag.findMany().filter(tag => memo.tags.includes(tag.id));
+  if (error || !memo) {
+    return (
+      <Boundary
+        label="메모 상세"
+        animateRerendering={false}
+        kind="solid"
+        className="flex flex-col gap-6"
+      >
+        <div className="p-6 text-center text-gray-400">
+          {error || '메모를 찾을 수 없습니다.'}
+        </div>
+        <div className="text-center">
+          <Link href="/">
+            <Button>메모 목록으로</Button>
+          </Link>
+        </div>
+      </Boundary>
+    );
+  }
 
   return (
     <Boundary

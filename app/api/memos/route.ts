@@ -8,6 +8,14 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search');
   const isPinned = searchParams.get('isPinned');
   const isArchived = searchParams.get('isArchived');
+  const debug = searchParams.get('debug');
+
+  // 디버깅 모드: 모든 메모 반환
+  if (debug === 'true') {
+    const allMemos = db.memo.findMany();
+    console.log('Debug: All memos in database:', allMemos);
+    return NextResponse.json(allMemos);
+  }
 
   const memos = db.memo.findMany({
     where: {
@@ -45,6 +53,11 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('Created memo:', newMemo); // 디버깅용 로그
+    
+    // 생성 후 즉시 조회해서 확인
+    const verifyMemo = db.memo.find({ where: { id: newMemo.id } });
+    console.log('Verification - Found memo after creation:', verifyMemo);
+    
     return NextResponse.json(newMemo, { status: 201 });
   } catch (error) {
     console.error('Error creating memo:', error);
