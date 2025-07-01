@@ -1,24 +1,69 @@
-import db from '#/lib/db';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Boundary } from '#/ui/boundary';
 import Link from 'next/link';
 import { MemoCard } from '#/app/_components/memo-card';
 
 export default function Page() {
-  const memos = db.memo.findMany({
-    where: { isArchived: false },
-    orderBy: { field: 'updatedAt', direction: 'desc' }
-  });
-  const categories = db.category.findMany();
-  const tags = db.tag.findMany();
+  const [memos, setMemos] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // 메모, 카테고리, 태그 데이터를 병렬로 가져오기
+        const [memosRes, categoriesRes, tagsRes] = await Promise.all([
+          fetch('/api/memos'),
+          fetch('/api/categories'),
+          fetch('/api/tags')
+        ]);
+
+        const memosData = await memosRes.json();
+        const categoriesData = await categoriesRes.json();
+        const tagsData = await tagsRes.json();
+
+        setMemos(memosData);
+        setCategories(categoriesData);
+        setTags(tagsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // 로딩 중일 때
+  if (isLoading) {
+    return (
+      <Boundary
+        label="메모 앱"
+        animateRerendering={false}
+        kind="solid"
+        className="flex flex-col gap-9"
+      >
+        <div className="text-center py-12">
+          <div className="text-gray-400">로딩 중...</div>
+        </div>
+      </Boundary>
+    );
+  }
 
   // 카테고리별로 메모 그룹화
   const memosByCategory = categories.map(category => ({
     ...category,
-    memos: memos.filter(memo => memo.category === category.id)
+    memos: memos.filter((memo: any) => memo.category === category.id)
   })).filter(category => category.memos.length > 0);
 
   // 고정된 메모들
-  const pinnedMemos = memos.filter(memo => memo.isPinned);
+  const pinnedMemos = memos.filter((memo: any) => memo.isPinned);
 
   return (
     <Boundary
@@ -56,9 +101,9 @@ export default function Page() {
             📌 고정된 메모
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pinnedMemos.map((memo) => {
-              const category = categories.find(c => c.id === memo.category);
-              const memoTags = tags.filter(tag => memo.tags.includes(tag.id));
+            {pinnedMemos.map((memo: any) => {
+              const category = categories.find((c: any) => c.id === memo.category);
+              const memoTags = tags.filter((tag: any) => memo.tags.includes(tag.id));
               
               return (
                 <MemoCard
@@ -83,8 +128,8 @@ export default function Page() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {category.memos.map((memo) => {
-              const memoTags = tags.filter(tag => memo.tags.includes(tag.id));
+            {category.memos.map((memo: any) => {
+              const memoTags = tags.filter((tag: any) => memo.tags.includes(tag.id));
               
               return (
                 <MemoCard

@@ -74,8 +74,9 @@ function MemoEditorContent() {
       if (response.ok) {
         const savedMemo = await response.json();
         console.log('Saved memo:', savedMemo); // 디버깅용 로그
-        router.push(`/memos/${savedMemo.id}`);
-        // 강제로 새로고침하여 데이터 동기화
+        
+        // 메인 페이지로 리다이렉트하고 새로고침
+        router.push('/');
         setTimeout(() => {
           window.location.reload();
         }, 100);
