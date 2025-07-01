@@ -54,8 +54,10 @@ export async function PUT(
       );
     }
 
+    console.log('Updated memo:', updatedMemo); // 디버깅용 로그
     return NextResponse.json(updatedMemo);
   } catch (error) {
+    console.error('Error updating memo:', error);
     return NextResponse.json(
       { error: '메모 수정에 실패했습니다.' },
       { status: 500 }

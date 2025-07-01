@@ -35,11 +35,14 @@ function MemoEditorContent() {
       fetch(`/api/memos/${memoId}`)
         .then(res => res.json())
         .then(memo => {
-          setTitle(memo.title);
-          setContent(memo.content);
-          setCategory(memo.category);
-          setSelectedTags(memo.tags);
-          setIsPinned(memo.isPinned);
+          setTitle(memo.title || '');
+          setContent(memo.content || '');
+          setCategory(memo.category || '');
+          setSelectedTags(memo.tags || []);
+          setIsPinned(memo.isPinned || false);
+        })
+        .catch(error => {
+          console.error('Error loading memo:', error);
         });
     }
   }, [memoId]);
@@ -53,7 +56,7 @@ function MemoEditorContent() {
         title,
         content,
         category,
-        tags: selectedTags,
+        tags: selectedTags || [],
         isPinned,
       };
 
@@ -70,9 +73,11 @@ function MemoEditorContent() {
 
       if (response.ok) {
         const savedMemo = await response.json();
+        console.log('Saved memo:', savedMemo); // 디버깅용 로그
         router.push(`/memos/${savedMemo.id}`);
       } else {
-        throw new Error('메모 저장에 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '메모 저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving memo:', error);
@@ -83,11 +88,12 @@ function MemoEditorContent() {
   };
 
   const handleTagToggle = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
+    setSelectedTags(prev => {
+      const currentTags = prev || [];
+      return currentTags.includes(tagId) 
+        ? currentTags.filter(id => id !== tagId)
+        : [...currentTags, tagId];
+    });
   };
 
   return (
@@ -179,12 +185,12 @@ function MemoEditorContent() {
                 type="button"
                 onClick={() => handleTagToggle(tag.id)}
                 className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                  selectedTags.includes(tag.id)
+                  selectedTags?.includes(tag.id)
                     ? 'text-white'
                     : 'text-gray-400 hover:text-gray-300'
                 }`}
                 style={{
-                  backgroundColor: selectedTags.includes(tag.id) 
+                  backgroundColor: selectedTags?.includes(tag.id) 
                     ? tag.color 
                     : `${tag.color}20`
                 }}

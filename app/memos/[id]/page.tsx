@@ -8,9 +8,15 @@ import { TimeAgo } from '#/app/_components/time-ago';
 export default async function MemoPage(props: any) {
   const awaitedProps = await props;
   const params = await awaitedProps.params;
+  
+  console.log('Looking for memo with ID:', params.id); // 디버깅용 로그
+  
   const memo = db.memo.find({ where: { id: params.id } });
   
+  console.log('Found memo:', memo); // 디버깅용 로그
+  
   if (!memo) {
+    console.log('Memo not found, calling notFound()'); // 디버깅용 로그
     notFound();
   }
 

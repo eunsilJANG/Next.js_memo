@@ -44,8 +44,10 @@ export async function POST(request: NextRequest) {
       isArchived: false,
     });
 
+    console.log('Created memo:', newMemo); // 디버깅용 로그
     return NextResponse.json(newMemo, { status: 201 });
   } catch (error) {
+    console.error('Error creating memo:', error);
     return NextResponse.json(
       { error: '메모 생성에 실패했습니다.' },
       { status: 500 }

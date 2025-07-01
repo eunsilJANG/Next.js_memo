@@ -10,6 +10,11 @@ import {
   type Tag,
 } from '../app/_internal/_data';
 
+// 간단한 UUID 생성 함수
+function generateId(): string {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
 type MemoWhere = { 
   id?: string; 
   category?: string; 
@@ -111,7 +116,7 @@ const db = {
     create: (memoData: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'>) => {
       const newMemo: Memo = {
         ...memoData,
-        id: (data.memos.length + 1).toString(),
+        id: generateId(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -171,7 +176,7 @@ const db = {
     create: (categoryData: Omit<Category, 'id'>) => {
       const newCategory: Category = {
         ...categoryData,
-        id: (data.categories.length + 1).toString(),
+        id: generateId(),
       };
       data.categories.push(newCategory);
       return newCategory;
@@ -226,7 +231,7 @@ const db = {
     create: (tagData: Omit<Tag, 'id'>) => {
       const newTag: Tag = {
         ...tagData,
-        id: (data.tags.length + 1).toString(),
+        id: generateId(),
       };
       data.tags.push(newTag);
       return newTag;
