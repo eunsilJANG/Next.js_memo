@@ -3,8 +3,10 @@
 // as a learning resource or example of best practices.
 
 import 'server-only';
+import fs from 'fs';
+import path from 'path';
 import {
-  data,
+  data as initialData,
   type Category,
   type Memo,
   type Tag,
@@ -13,6 +15,56 @@ import {
 // 간단한 UUID 생성 함수
 function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// 데이터 파일 경로
+const DATA_DIR = path.join(process.cwd(), 'data');
+const MEMOS_FILE = path.join(DATA_DIR, 'memos.json');
+const CATEGORIES_FILE = path.join(DATA_DIR, 'categories.json');
+const TAGS_FILE = path.join(DATA_DIR, 'tags.json');
+
+// 데이터 디렉토리 생성
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+// JSON 파일에서 데이터 로드
+function loadFromFile<T>(filePath: string, defaultValue: T): T {
+  try {
+    if (fs.existsSync(filePath)) {
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(fileContent);
+    }
+  } catch (error) {
+    console.error(`Error loading from file (${filePath}):`, error);
+  }
+  return defaultValue;
+}
+
+// JSON 파일에 데이터 저장
+function saveToFile<T>(filePath: string, data: T): void {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error(`Error saving to file (${filePath}):`, error);
+  }
+}
+
+// 초기 데이터 로드
+let data = {
+  memos: loadFromFile<Memo[]>(MEMOS_FILE, initialData.memos),
+  categories: loadFromFile<Category[]>(CATEGORIES_FILE, initialData.categories),
+  tags: loadFromFile<Tag[]>(TAGS_FILE, initialData.tags),
+};
+
+// 데이터 변경 시 자동 저장
+function saveData() {
+  saveToFile(MEMOS_FILE, data.memos);
+  saveToFile(CATEGORIES_FILE, data.categories);
+  saveToFile(TAGS_FILE, data.tags);
 }
 
 type MemoWhere = { 
@@ -121,6 +173,7 @@ const db = {
         updatedAt: new Date().toISOString(),
       };
       data.memos.push(newMemo);
+      saveData(); // 데이터 저장
       return newMemo;
     },
     update: (id: string, memoData: Partial<Omit<Memo, 'id' | 'createdAt'>>) => {
@@ -132,6 +185,7 @@ const db = {
         ...memoData,
         updatedAt: new Date().toISOString(),
       };
+      saveData(); // 데이터 저장
       return data.memos[index];
     },
     delete: (id: string) => {
@@ -139,6 +193,7 @@ const db = {
       if (index === -1) return false;
       
       data.memos.splice(index, 1);
+      saveData(); // 데이터 저장
       return true;
     },
   },
@@ -179,6 +234,7 @@ const db = {
         id: generateId(),
       };
       data.categories.push(newCategory);
+      saveData(); // 데이터 저장
       return newCategory;
     },
     update: (id: string, categoryData: Partial<Omit<Category, 'id'>>) => {
@@ -189,6 +245,7 @@ const db = {
         ...data.categories[index],
         ...categoryData,
       };
+      saveData(); // 데이터 저장
       return data.categories[index];
     },
     delete: (id: string) => {
@@ -196,6 +253,7 @@ const db = {
       if (index === -1) return false;
       
       data.categories.splice(index, 1);
+      saveData(); // 데이터 저장
       return true;
     },
   },
@@ -234,6 +292,7 @@ const db = {
         id: generateId(),
       };
       data.tags.push(newTag);
+      saveData(); // 데이터 저장
       return newTag;
     },
     update: (id: string, tagData: Partial<Omit<Tag, 'id'>>) => {
@@ -244,6 +303,7 @@ const db = {
         ...data.tags[index],
         ...tagData,
       };
+      saveData(); // 데이터 저장
       return data.tags[index];
     },
     delete: (id: string) => {
@@ -251,6 +311,7 @@ const db = {
       if (index === -1) return false;
       
       data.tags.splice(index, 1);
+      saveData(); // 데이터 저장
       return true;
     },
   },
